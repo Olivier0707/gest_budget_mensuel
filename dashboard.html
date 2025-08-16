@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion Budget - Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+</head>
+<body>
+    <div class="dashboard">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="nav-brand">
+                <h1>💰 Gestion Budget</h1>
+            </div>
+            <div class="nav-user">
+                <span id="username">Utilisateur</span>
+                <button onclick="logout()" class="btn btn-outline">Déconnexion</button>
+            </div>
+        </nav>
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <ul class="nav-menu">
+                <li><a href="#" onclick="showSection('dashboard')" class="nav-link active">📊 Tableau de bord</a></li>
+                <li><a href="#" onclick="showSection('revenus')" class="nav-link">💵 Revenus</a></li>
+                <li><a href="#" onclick="showSection('depenses')" class="nav-link">💸 Dépenses</a></li>
+                <li><a href="#" onclick="showSection('categories')" class="nav-link">🏷️ Catégories</a></li>
+                <li><a href="#" onclick="showSection('previsions')" class="nav-link">📈 Prévisions</a></li>
+            </ul>
+        </aside>
+
+        <!-- Contenu principal -->
+        <main class="main-content">
+            <!-- Section Tableau de bord -->
+            <section id="dashboard-section" class="content-section active">
+                <h2>Tableau de bord</h2>
+                
+                <!-- Contrôles de date -->
+                <div class="date-controls">
+                    <select id="monthSelect">
+                        <option value="1">Janvier</option>
+                        <option value="2">Février</option>
+                        <option value="3">Mars</option>
+                        <option value="4">Avril</option>
+                        <option value="5">Mai</option>
+                        <option value="6">Juin</option>
+                        <option value="7">Juillet</option>
+                        <option value="8">Août</option>
+                        <option value="9">Septembre</option>
+                        <option value="10">Octobre</option>
+                        <option value="11">Novembre</option>
+                        <option value="12">Décembre</option>
+                    </select>
+                    <input type="number" id="yearSelect" min="2020" max="2030" value="2025">
+                    <button onclick="updateStats()" class="btn btn-primary">Actualiser</button>
+                </div>
+
+                <!-- Cartes de statistiques -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Revenus totaux</h3>
+                        <p class="stat-value" id="totalRevenus">0 €</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Dépenses totales</h3>
+                        <p class="stat-value" id="totalDepenses">0 €</p>  
+                    </div>
+                    <div class="stat-card">
+                        <h3>Budget restant</h3>
+                        <p class="stat-value" id="budgetRestant">0 €</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Jours d'autonomie</h3>
+                        <p class="stat-value" id="joursAutonomie">0 jours</p>
+                    </div>
+                </div>
+
+                <!-- Alerte de rupture -->
+                <div id="alerteRupture" class="alert alert-warning" style="display: none;">
+                    ⚠️ Attention ! Votre budget risque d'être insuffisant avant la fin du mois.
+                    <div class="suggestions">
+                        <p><strong>Suggestions :</strong></p>
+                        <ul>
+                            <li>Réduire les dépenses de loisirs</li>
+                            <li>Reporter les achats non essentiels</li>
+                            <li>Supprimer les dépenses non prioritaires</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Graphique des dépenses par catégorie -->
+                <div class="chart-container">
+                    <h3>Répartition des dépenses par catégorie</h3>
+                    <canvas id="categoryChart"></canvas>
+                </div>
+            </section>
+
+            <!-- Section Revenus -->
+            <section id="revenus-section" class="content-section">
+                <h2>Gestion des Revenus</h2>
+                
+                <form id="revenuForm" class="form-card">
+                    <h3>Ajouter un revenu</h3>
+                    <div class="form-group">
+                        <label for="revenuSource">Source du revenu</label>
+                        <input type="text" id="revenuSource" name="source" placeholder="Ex: Salaire, Freelance..." required>
+                    </div>
+                    <div class="form-group">
+                        <label for="revenuMontant">Montant (€)</label>
+                        <input type="number" id="revenuMontant" name="montant" step="0.01" min="0" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Ajouter</button>
+                </form>
+
+                <div class="table-container">
+                    <h3>Liste des revenus</h3>
+                    <table id="revenusTable">
+                        <thead>
+                            <tr>
+                                <th>Source</th>
+                                <th>Montant</th>
+                                <th>Date d'ajout</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Section Dépenses -->
+            <section id="depenses-section" class="content-section">
+                <h2>Gestion des Dépenses</h2>
+                
+                <form id="depenseForm" class="form-card">
+                    <h3>Ajouter une dépense</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="depenseCategorie">Catégorie</label>
+                            <select id="depenseCategorie" name="category_id" required>
+                                <option value="">Sélectionner une catégorie</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="depenseType">Type</label>
+                            <select id="depenseType" name="type" required>
+                                <option value="fixe">Fixe</option>
+                                <option value="variable">Variable</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="depenseDescription">Description</label>
+                        <input type="text" id="depenseDescription" name="description" placeholder="Ex: Courses alimentaires..." required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="depenseMontant">Montant (€)</label>
+                            <input type="number" id="depenseMontant" name="montant" step="0.01" min="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="depenseDate">Date</label>
+                            <input type="date" id="depenseDate" name="date_depense" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Ajouter</button>
+                </form>
+
+                <!-- Filtres -->
+                <div class="filters">
+                    <select id="filterCategorie">
+                        <option value="">Toutes les catégories</option>
+                    </select>
+                    <input type="month" id="filterMois" />
+                    <button onclick="filterDepenses()" class="btn btn-secondary">Filtrer</button>
+                </div>
+
+                <div class="table-container">
+                    <h3>Liste des dépenses</h3>
+                    <table id="depensesTable">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Catégorie</th>
+                                <th>Description</th>
+                                <th>Type</th>
+                                <th>Montant</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Section Catégories -->
+            <section id="categories-section" class="content-section">
+                <h2>Gestion des Catégories</h2>
+                
+                <form id="categorieForm" class="form-card">
+                    <h3>Ajouter une catégorie</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="categorieNom">Nom de la catégorie</label>
+                            <input type="text" id="categorieNom" name="nom" placeholder="Ex: Vacances..." required>
+                        </div>
+                        <div class="form-group">
+                            <label for="categorieCouleur">Couleur</label>
+                            <input type="color" id="categorieCouleur" name="couleur" value="#007bff">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Ajouter</button>
+                </form>
+
+                <div class="categories-grid" id="categoriesGrid">
+                    <!-- Les catégories seront chargées ici -->
+                </div>
+            </section>
+
+            <!-- Section Prévisions -->
+            <section id="previsions-section" class="content-section">
+                <h2>Prévisions Budgétaires</h2>
+                
+                <div class="predictions-container">
+                    <div class="prediction-card">
+                        <h3>Analyse du budget actuel</h3>
+                        <div id="analyseBudget">
+                            <p>Chargement de l'analyse...</p>
+                        </div>
+                    </div>
+                    
+                    <div class="prediction-card">
+                        <h3>Suggestions d'économies</h3>
+                        <div id="suggestionsEconomies">
+                            <ul>
+                                <li>Analysez vos dépenses variables</li>
+                                <li>Identifiez les postes de dépenses les plus importants</li>
+                                <li>Planifiez vos gros achats</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <h3>Évolution mensuelle</h3>
+                    <canvas id="evolutionChart"></canvas>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="dashboard.js"></script>
+</body>
+</html>
